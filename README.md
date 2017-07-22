@@ -17,8 +17,8 @@ Requirements
 
 Usage
 -----
-# Reboot into recovery and mount the system partition.
-# Back up your firmware!  This puts your current firmware in `/sdcard/flashable/firmware-backup`.  Copy this backup off of your phone and check the sha256sums.
+1. Reboot into recovery and mount the system partition.
+1. Back up your firmware!  This puts your current firmware in `/sdcard/flashable/firmware-backup`.  Copy this backup off of your phone and check the sha256sums.
 ```
 /system/xbin/bash scripts/backup-firmware.sh
 ```
