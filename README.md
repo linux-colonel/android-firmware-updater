@@ -12,7 +12,7 @@ Requirements
 * Oneplus 3T
 * LineageOS (bash needed; this could probably be eliminated)
 * TWRP
-* Latest [OnePlus OxygenOS zip](http://downloads.oneplus.net/oneplus-3t/).
+* Latest [OnePlus OxygenOS zip](http://downloads.oneplus.net/oneplus-3t/oneplus_3t_oxygenos_openbeta_11/).
 * Root access
 
 Usage
