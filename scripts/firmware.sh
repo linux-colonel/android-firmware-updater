@@ -125,12 +125,21 @@ function confirm()
 
 function do_flash()
 {
-    # TODO
-    echo "not implemented"
-    exit 1
+    if [ "$noop" ]; then
+        cmd_prefix="echo Would run: "
+    else
+        unset cmd_prefix
+    fi
     echo "Beginning firmware update!"
     echo "***DO NOT INTERRUPT***"
-    #dd if=$update_dir/RADIO/static_nvbk.bin of=/dev/block/bootdevice/by-name/oem_stanvbk
+
+    set -e
+    for firmware_file in "${!firmware_partition_map[@]}"; do
+        partition=${firmware_partition_map[$firmware]}
+        echo "Flashing firmware ${firmware_file} to partition ${partition}."
+        $cmd_prefix dd if=$unpack_dir/$firmware_file of=$partition
+    done
+    set +e
 
     echo "Firmware update complete!"
 }
