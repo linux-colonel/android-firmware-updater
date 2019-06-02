@@ -80,7 +80,7 @@ function parse_firmware_partition_mapping(){
     for line in $lines; do
         filename=$(echo $line | awk -F ',' '{print $1}')
         partition=$(echo $line | awk -F ',' '{print $2}')
-        firmware_partition_map[$filename] = $partition
+        firmware_partition_map[$filename]=$partition
     done
 }
 
