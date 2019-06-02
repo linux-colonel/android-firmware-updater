@@ -209,10 +209,7 @@ while getopts "h?fbrn" opt; do
     b)
         backup=1
         ;;
-    r)if [ ! -d "$backup_dir" ]; then
-        echo "backup-dir must be a directory" >&2
-        exit 1
-    fi
+    r)
         restore=1
         ;;
     n)
@@ -253,10 +250,6 @@ if [ "$backup" ]; then
     echo "Running in backup mode."
     backup_dir=$1
     updater_zip=$2
-    if [ ! -d "$backup_dir" ]; then
-        echo "backup-dir must be a directory" >&2
-        exit 1
-    fi
     process_updater $updater_zip
     parse_firmware_partition_mapping
     do_backup
