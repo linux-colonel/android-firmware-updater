@@ -20,7 +20,7 @@ Requirements
 Assumptions
 -----------
 
-* The script reads `META-INF/com/google/android/updater-script' to determine the mapping of firmware files to partitions. `package_extract_file` lines are the only lines considered.
+* The script reads `META-INF/com/google/android/updater-script` to determine the mapping of firmware files to partitions. `package_extract_file` lines are the only lines considered.
 * Partitions and firmware files with 'bak' in the name are ignored.  This is to avoid accidentally flashing backup partitions.  
 * Firmware files must be in a directory at the root of the zip called either `firmware-update` or `RADIO`. 
 
