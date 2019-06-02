@@ -46,7 +46,6 @@ function cleanup()
 
 function process_updater()
 {
-    updater_zip=$1
     unzip -l $updater_zip 2>/dev/null |grep $zip_updater_script >/dev/null 2>&1
     ret=$?
     if [ $ret -ne 0 ]; then
@@ -84,18 +83,30 @@ function parse_firmware_partition_mapping(){
     done
 }
 
-function flash_sanity_check(){
-    if [ -d ${unpack_dir}/firmware-update ]; then
-        num_firmware_files=$(ls ${unpack_dir}/firmware-update | wc -w)
-    else
-        num_firmware_files=0
-    fi
-    if [ -d ${unpack_dir}/RADIO ]; then
-        num_radio_files=$(ls ${unpack_dir}/RADIO | wc -w)
-    else
-        num_radio_files=0
-    fi
-    total_num_files=$((num_firmware_files+num_radio_files))
+function sanity_check(){
+    local firmware_base_dir=$1
+
+    total_num_files=0
+    for dir in firmware-update RADIO; do 
+        num_files=0
+        if [ -d ${firmware_base_dir}/${dir} ]; then
+            num_files=$(ls ${firmware_base_dir}/${dir} | wc -w)
+            if [ -f ${firmware_base_dir}/${dir}/SHA256SUMS ]; then
+                echo "Checking SHA256SUMs."
+                pushd ${firmware_base_dir}/${dir} > /dev/null
+                sha256sum -c SHA256SUMS
+                ret=$?
+                popd > /dev/null
+                if [ $ret -ne 0 ]; then
+                    echo "Failed to check SHA256SUMs." >&2
+                    exit 1
+                fi
+            fi
+        fi
+        total_num_files=$((total_num_files+num_files))
+    done
+
+
     if [ $total_num_files -le 0 ]; then
         echo "No firmware update files found." >&2
         cleanup
@@ -108,7 +119,7 @@ function flash_sanity_check(){
         exit 1
     fi
     for filename in ${!firmware_partition_map[@]}; do
-        if [ ! -f "${unpack_dir}/$filename" ]; then
+        if [ ! -f "${firmware_base_dir}/$filename" ]; then
             echo "Failed to find firmware file ${filename}." >&2
             cleanup
             exit 1
@@ -181,7 +192,7 @@ function do_backup()
     for dir in ${backup_dir}/RADIO ${backup_dir}/firmware-update; do
         pushd $dir >/dev/null
         sha256sum * > SHA256SUMS
-        popd
+        popd > /dev/null
     done
 }
 
@@ -240,9 +251,9 @@ fi
 if [ "$flash" ]; then
     echo "Running in flash mode."
     updater_zip=$1
-    process_updater $updater_zip
+    process_updater
     parse_firmware_partition_mapping
-    flash_sanity_check
+    sanity_check $unpack_dir
     do_flash
 fi
 
@@ -250,7 +261,7 @@ if [ "$backup" ]; then
     echo "Running in backup mode."
     backup_dir=$1
     updater_zip=$2
-    process_updater $updater_zip
+    process_updater
     parse_firmware_partition_mapping
     do_backup
 fi
@@ -263,9 +274,9 @@ if [ "$restore" ]; then
         echo "backup-dir must be a directory" >&2
         exit 1
     fi
-    process_updater $updater_zip
+    process_updater
     parse_firmware_partition_mapping
-    restore_sanity_check
+    sanity_check $backup_dir
     do_restore
 fi
 
