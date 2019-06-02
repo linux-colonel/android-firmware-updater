@@ -2,6 +2,8 @@
 
 # global vars
 unpack_dir="updater_unpacked"
+zip_updater_script="META-INF/com/google/android/updater-script"
+declare -A firmware_partition_map
 
 
 function checkroot()
@@ -38,13 +40,14 @@ function usage()
 
 function cleanup()
 {
+    echo "Cleaning up."
     rm -rf $unpack_dir
 }
 
 function process_updater()
 {
     updater_zip=$1
-    unzip -l $updater_zip 2>/dev/null |grep 'META-INF/com/google/android/updater-script' >/dev/null 2>&1
+    unzip -l $updater_zip 2>/dev/null |grep $zip_updater_script >/dev/null 2>&1
     ret=$?
     if [ $ret -ne 0 ]; then
         echo "This does not appear to be an android updater file." >&2
@@ -63,11 +66,54 @@ function process_updater()
     fi
 }
 
+# read the script that would do the flashing to find
+# the firmware files to flash and the partitions they go on.
+function parse_firmware_partition_mapping(){
+
+    lines=$(grep package_extract_file ${unpack_dir}/${zip_updater_script} | \
+        # don't flash boot, recovery, etc
+        grep -E 'firmware-update|RADIO' | \
+        # don't flash backup partitions
+        grep -v bak | \
+        # format into comma-separated list.
+        sed 's/package_extract_file//g;s/[()"; ]//g')
+    for line in $lines; do
+        filename=$(echo $line | awk -F ',' '{print $1}')
+        partition=$(echo $line | awk -F ',' '{print $2}')
+        firmware_partition_map[$filename] = $partition
+    done
+}
+
+function sanity_check(){
+    num_firmware_files=$(ls ${unpack_dir}/firmware-update | wc -w)
+    num_radio_files=$(ls ${unpack_dir}/RADIO | wc -w)
+    total_num_files=$((num_firmware_files+num_radio_files))
+    if [ $total_num_files -le 0 ]; then
+        echo "No firmware update files found." >&2
+        cleanup
+        exit 1
+    fi
+    if [ $total_num_files -ne ${#firmware_partition_map[@]} ]; then
+        echo "The number of firmware files found ($total_num_files) differs from what was found in the flashing script ($zip_updater_script)." >&2
+        echo "Aborting."
+        cleanup
+        exit 1
+    fi
+    for filename in ${!firmware_partition_map[@]}; do
+        if [ ! -f "${unpack_dir}/$filename" ]; then
+            echo "Failed to find firmware file ${filename}." >&2
+            cleanup
+            exit 1
+        fi
+    done
+}
+
 function confirm()
 {
     echo "****WARNING****"
     echo "Only run this if you absolutely know what you're doing!"
-    echo "THIS WILL BRICK YOUR PHONE OTHERWISE!"
+    echo "Did you run in no-op mode first?"
+    echo "THIS COULD BRICK YOUR DEVICE!"
     echo -n "Continue (y/N)"
     read ans
 
@@ -79,31 +125,12 @@ function confirm()
 
 function do_flash()
 {
+    # TODO
+    echo "not implemented"
+    exit 1
     echo "Beginning firmware update!"
     echo "***DO NOT INTERRUPT***"
-    dd if=$update_dir/RADIO/static_nvbk.bin of=/dev/block/bootdevice/by-name/oem_stanvbk
-    dd if=$update_dir/firmware-update/cmnlib64.mbn of=/dev/block/bootdevice/by-name/cmnlib64
-    dd if=$update_dir/firmware-update/cmnlib.mbn of=/dev/block/bootdevice/by-name/cmnlib
-    dd if=$update_dir/firmware-update/hyp.mbn of=/dev/block/bootdevice/by-name/hyp
-    dd if=$update_dir/firmware-update/pmic.elf of=/dev/block/bootdevice/by-name/pmic
-    dd if=$update_dir/firmware-update/tz.mbn of=/dev/block/bootdevice/by-name/tz
-    dd if=$update_dir/firmware-update/emmc_appsboot.mbn of=/dev/block/bootdevice/by-name/aboot
-    dd if=$update_dir/firmware-update/devcfg.mbn of=/dev/block/bootdevice/by-name/devcfg
-    dd if=$update_dir/firmware-update/keymaster.mbn of=/dev/block/bootdevice/by-name/keymaster
-    dd if=$update_dir/firmware-update/xbl.elf of=/dev/block/bootdevice/by-name/xbl
-    dd if=$update_dir/firmware-update/rpm.mbn of=/dev/block/bootdevice/by-name/rpm
-    dd if=$update_dir/firmware-update/cmnlib64.mbn of=/dev/block/bootdevice/by-name/cmnlib64bak
-    dd if=$update_dir/firmware-update/cmnlib.mbn of=/dev/block/bootdevice/by-name/cmnlibbak
-    dd if=$update_dir/firmware-update/hyp.mbn of=/dev/block/bootdevice/by-name/hypbak
-    dd if=$update_dir/firmware-update/tz.mbn of=/dev/block/bootdevice/by-name/tzbak
-    dd if=$update_dir/firmware-update/emmc_appsboot.mbn of=/dev/block/bootdevice/by-name/abootbak
-    dd if=$update_dir/firmware-update/devcfg.mbn of=/dev/block/bootdevice/by-name/devcfgbak
-    dd if=$update_dir/firmware-update/keymaster.mbn of=/dev/block/bootdevice/by-name/keymasterbak
-    dd if=$update_dir/firmware-update/xbl.elf of=/dev/block/bootdevice/by-name/xblbak
-    dd if=$update_dir/firmware-update/rpm.mbn of=/dev/block/bootdevice/by-name/rpmbak
-    dd if=$update_dir/firmware-update/NON-HLOS.bin of=/dev/block/bootdevice/by-name/modem
-    dd if=$update_dir/firmware-update/adspso.bin of=/dev/block/bootdevice/by-name/dsp
-    dd if=$update_dir/firmware-update/BTFM.bin of=/dev/block/bootdevice/by-name/bluetooth
+    #dd if=$update_dir/RADIO/static_nvbk.bin of=/dev/block/bootdevice/by-name/oem_stanvbk
 
     echo "Firmware update complete!"
 }
@@ -165,12 +192,16 @@ if [ "$noop" ]; then
     echo "NO-OP mode activated!"
 else
     checkroot
+    confirm
 fi
 
 if [ "$flash" ]; then
     echo "Running in flash mode."
     updater_zip=$1
     process_updater $updater_zip
+    parse_firmware_partition_mapping
+    sanity_check
+    do_flash
 fi
 
 if [ "$backup" ]; then
@@ -182,6 +213,9 @@ if [ "$backup" ]; then
         exit 1
     fi
     process_updater $updater_zip
+    parse_firmware_partition_mapping
+    sanity_check
+    do_backup
 fi
 
 if [ "$restore" ]; then
@@ -193,6 +227,9 @@ if [ "$restore" ]; then
         exit 1
     fi
     process_updater $updater_zip
+    parse_firmware_partition_mapping
+    sanity_check
+    do_restore
 fi
 
 cleanup
