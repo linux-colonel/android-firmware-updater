@@ -1,36 +1,36 @@
-OnePlus 3T firmware updater
-===========================
-These scripts allow you to upgrade your firmware on your OnePlus 3T without doing a full flash of OxygenOS.  For example, you're using LineageOS and you need to update the firmware in order to flash the latest weekly build.
+Android Firmware Updater
+========================
+
+This script allows you to upgrade your firmware on your Android without doing a full flash of the stock ROM.  For example, you're using LineageOS and you need to update the firmware in order to flash the latest weekly build.
 
 DISCLAIMER
 ----------
+
 Use this at your own risk.  I am not responsible if you brick your phone. ;-)
-I have tested these scripts on my own Oneplus 3T.
+I have tested these scripts on my own Oneplus One and Oneplus 3T.
 
 Requirements
 ------------
-* Oneplus 3T
-* LineageOS (bash needed; this could probably be eliminated)
+
+* LineageOS (or ROM with bash and unzip)
 * TWRP
-* Latest [OnePlus OxygenOS zip](http://downloads.oneplus.net/oneplus-3t/oneplus_3t_oxygenos_openbeta_11/).
+* Recovery-flashable zip containing firmware files.  See Assumptions section below for more details.
 * Root access
+
+Assumptions
+-----------
+
+* The script reads `META-INF/com/google/android/updater-script' to determine the mapping of firmware files to partitions. `package_extract_file` lines are the only lines considered.
+* Partitions and firmware files with 'bak' in the name are ignored.  This is to avoid accidentally flashing backup partitions.  
+* Firmware files must be in a directory at the root of the zip called either `firmware-update` or `RADIO`. 
 
 Usage
 -----
-1. Reboot into recovery and mount the system partition.
-1. Back up your firmware!  This puts your current firmware in `/sdcard/flashable/firmware-backup`.  Copy this backup off of your phone and check the sha256sums.
-```
-/system/xbin/bash scripts/backup-firmware.sh
-```
-# Unzip the OxygenOS ROM.
-```
-cd /sdcard/
-mkdir -p /sdcard/flashable/oxygen
-cd /sdcard/flashable/oxygen
-/system/xbin/unzip /sdcard/Download/OnePlus3TOxygen_28_OTA_028_all_1707141503_fc82c5d2e3054e44.zip
-```
-# Flash the firmware.
-```
-/system/xbin/bash scripts/flash-firmware.sh /sdcard/flashable/oxygen
-reboot
-```
+
+This script may be run as root from within Android, or from recovery.
+
+1. Run the script in no-op mode first!  For extra safety, do NOT run it as root.  If it fails, do not continue.  Check to make sure what it's going to do is sane.
+2. Become root.
+3. Back up your firmware!  This puts your current firmware in `$(pwd)/firmware-backup`.  Copy this backup off of your phone and check the sha256sums.
+4. Flash your firmware.
+
