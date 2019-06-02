@@ -7,13 +7,12 @@ DISCLAIMER
 ----------
 
 Use this at your own risk.  I am not responsible if you brick your phone. ;-)
-I have tested these scripts on my own Oneplus One and Oneplus 3T.
+I have tested these scripts on my own Oneplus 3T.
 
 Requirements
 ------------
 
 * LineageOS (or ROM with bash and unzip)
-* TWRP
 * Recovery-flashable zip containing firmware files.  See Assumptions section below for more details.
 * Root access
 
@@ -27,10 +26,10 @@ Assumptions
 Usage
 -----
 
-This script may be run as root from within Android, or from recovery.
+This script may be run as root from within Android.
 
 1. Run the script in no-op mode first!  For extra safety, do NOT run it as root.  If it fails, do not continue.  Check to make sure what it's going to do is sane.
 2. Become root.
-3. Back up your firmware!  This puts your current firmware in `$(pwd)/firmware-backup`.  Copy this backup off of your phone and check the sha256sums.
+3. Back up your firmware!  This puts your current firmware in the directory you specify.  Copy this backup off of your phone and check the sha256sums.
 4. Flash your firmware.
 
