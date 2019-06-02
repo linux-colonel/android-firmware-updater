@@ -135,7 +135,7 @@ function do_flash()
 
     set -e
     for firmware_file in "${!firmware_partition_map[@]}"; do
-        partition=${firmware_partition_map[$firmware]}
+        partition=${firmware_partition_map[$firmware_file]}
         echo "Flashing firmware ${firmware_file} to partition ${partition}."
         $cmd_prefix dd if=$unpack_dir/$firmware_file of=$partition
     done
