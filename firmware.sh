@@ -84,7 +84,7 @@ function parse_firmware_partition_mapping(){
     done
 }
 
-function sanity_check(){
+function flash_sanity_check(){
     if [ -d ${unpack_dir}/firmware-update ]; then
         num_firmware_files=$(ls ${unpack_dir}/firmware-update | wc -w)
     else
@@ -116,6 +116,13 @@ function sanity_check(){
     done
 }
 
+function restore_sanity_check()
+{
+    #TODO
+    echo "Not implemented."
+    exit 1
+}
+
 function confirm()
 {
     echo "****WARNING****"
@@ -133,11 +140,6 @@ function confirm()
 
 function do_flash()
 {
-    if [ "$noop" ]; then
-        cmd_prefix="echo Would run: "
-    else
-        unset cmd_prefix
-    fi
     echo "Beginning firmware update!"
     echo "***DO NOT INTERRUPT***"
 
@@ -154,9 +156,33 @@ function do_flash()
 
 function do_backup()
 {
-    # TODO
-    echo "not implemented"
-    exit 1
+    if [ -e $backup_dir ]; then
+        echo "The backup directory ${backup_dir} already exists." >&2
+        echo "Please move it somewhere else to continue." >&2
+        cleanup
+        exit 1
+    fi
+
+    echo "Beginning backup!"
+    set -e
+    mkdir ${backup_dir}
+    mkdir ${backup_dir}/{RADIO,firmware-update}
+
+    for firmware_file in "${!firmware_partition_map[@]}"; do
+        partition=${firmware_partition_map[$firmware_file]}
+        echo "Backing up firmware ${firmware_file} from partition ${partition}."
+        $cmd_prefix dd if=$partition of=$backup_dir/$firmware_file
+    done
+    set +e
+
+    echo "Backup completed!"
+
+    echo "Computing SHA256SUMs."
+    for dir in ${backup_dir}/RADIO ${backup_dir}/firmware-update; do
+        pushd $dir >/dev/null
+        sha256sum * > SHA256SUMS
+        popd
+    done
 }
 
 function do_restore()
@@ -206,8 +232,10 @@ if [ $((flash+backup+restore)) -ne 1 ]; then
 fi
 
 if [ "$noop" ]; then
+    cmd_prefix="echo Would run: "
     echo "NO-OP mode activated!"
 else
+    unset cmd_prefix
     checkroot
     confirm
 fi
@@ -217,7 +245,7 @@ if [ "$flash" ]; then
     updater_zip=$1
     process_updater $updater_zip
     parse_firmware_partition_mapping
-    sanity_check
+    flash_sanity_check
     do_flash
 fi
 
@@ -231,7 +259,6 @@ if [ "$backup" ]; then
     fi
     process_updater $updater_zip
     parse_firmware_partition_mapping
-    sanity_check
     do_backup
 fi
 
@@ -245,7 +272,7 @@ if [ "$restore" ]; then
     fi
     process_updater $updater_zip
     parse_firmware_partition_mapping
-    sanity_check
+    restore_sanity_check
     do_restore
 fi
 
