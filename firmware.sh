@@ -85,8 +85,16 @@ function parse_firmware_partition_mapping(){
 }
 
 function sanity_check(){
-    num_firmware_files=$(ls ${unpack_dir}/firmware-update | wc -w)
-    num_radio_files=$(ls ${unpack_dir}/RADIO | wc -w)
+    if [ -d ${unpack_dir}/firmware-update ]; then
+        num_firmware_files=$(ls ${unpack_dir}/firmware-update | wc -w)
+    else
+        num_firmware_files=0
+    fi
+    if [ -d ${unpack_dir}/RADIO ]; then
+        num_radio_files=$(ls ${unpack_dir}/RADIO | wc -w)
+    else
+        num_radio_files=0
+    fi
     total_num_files=$((num_firmware_files+num_radio_files))
     if [ $total_num_files -le 0 ]; then
         echo "No firmware update files found." >&2
