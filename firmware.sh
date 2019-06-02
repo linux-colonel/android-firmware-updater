@@ -127,13 +127,6 @@ function sanity_check(){
     done
 }
 
-function restore_sanity_check()
-{
-    #TODO
-    echo "Not implemented."
-    exit 1
-}
-
 function confirm()
 {
     echo "****WARNING****"
@@ -163,6 +156,7 @@ function do_flash()
     set +e
 
     echo "Firmware update complete!"
+    echo "Reboot your device now."
 }
 
 function do_backup()
@@ -198,9 +192,18 @@ function do_backup()
 
 function do_restore()
 {
-    # TODO
-    echo "not implemented"
-    exit 1
+    echo "Beginning restore!"
+    echo "***DO NOT INTERRUPT***"
+    set -e
+    for firmware_file in "${!firmware_partition_map[@]}"; do
+        partition=${firmware_partition_map[$firmware_file]}
+        echo "Restoring firmware from ${firmware_file} to partition ${partition}."
+        $cmd_prefix dd if=$backup_dir/$firmware_file of=$partition
+    done
+    set +e
+
+    echo "Restore complete!"
+    echo "Reboot your device now."
 }
 
 # main script
