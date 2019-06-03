@@ -147,13 +147,15 @@ function do_flash()
     echo "Beginning firmware update!"
     echo "***DO NOT INTERRUPT***"
 
-    set -e
     for firmware_file in "${!firmware_partition_map[@]}"; do
         partition=${firmware_partition_map[$firmware_file]}
         echo "Flashing firmware ${firmware_file} to partition ${partition}."
         $cmd_prefix dd if=$unpack_dir/$firmware_file of=$partition
+        ret=$?
+        if [ $ret -ne 0 ]; then
+            echo "Warning: flash of $partition failed!"
+        fi
     done
-    set +e
 
     echo "Firmware update complete!"
     echo "Reboot your device now."
@@ -169,7 +171,6 @@ function do_backup()
     fi
 
     echo "Beginning backup!"
-    set -e
     mkdir ${backup_dir}
     mkdir ${backup_dir}/{RADIO,firmware-update}
 
@@ -177,8 +178,11 @@ function do_backup()
         partition=${firmware_partition_map[$firmware_file]}
         echo "Backing up firmware ${firmware_file} from partition ${partition}."
         $cmd_prefix dd if=$partition of=$backup_dir/$firmware_file
+        ret=$?
+        if [ $ret -ne 0 ]; then
+            echo "Warning: flash of $partition failed!"
+        fi
     done
-    set +e
 
     echo "Backup completed!"
 
@@ -194,13 +198,15 @@ function do_restore()
 {
     echo "Beginning restore!"
     echo "***DO NOT INTERRUPT***"
-    set -e
     for firmware_file in "${!firmware_partition_map[@]}"; do
         partition=${firmware_partition_map[$firmware_file]}
         echo "Restoring firmware from ${firmware_file} to partition ${partition}."
         $cmd_prefix dd if=$backup_dir/$firmware_file of=$partition
+        ret=$?
+        if [ $ret -ne 0 ]; then
+            echo "Warning: flash of $partition failed!"
+        fi
     done
-    set +e
 
     echo "Restore complete!"
     echo "Reboot your device now."
